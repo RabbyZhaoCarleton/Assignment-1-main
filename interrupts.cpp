@@ -5,7 +5,7 @@
  *
  */
 
-#include<interrupts.hpp>
+#include <interrupts.hpp>
 
 int main(int argc, char** argv) {
 
@@ -19,13 +19,9 @@ int main(int argc, char** argv) {
     std::string execution;  //!< string to accumulate the execution output
 
     /******************ADD YOUR VARIABLES HERE*************************/
-    
-    int current_time = 0;           // Track current simulation time
-    bool initialized = false;       // Track if variables are initialized
-    int data_x = 0;                 // Data read from input device
-    int data_y = 0;                 // Calculated data
-    bool program_running = true;    // Main program loop control
-    
+    int current_time = 0; //Keep track of the current time in the simulation
+    int context_save_time = 10 ; //Time taken to save context
+    const int isr_body_time = 40;    //ISR body execution time
     /******************************************************************/
 
     //parse each line of the input trace file
@@ -33,54 +29,41 @@ int main(int argc, char** argv) {
         auto [activity, duration_intr] = parse_trace(trace);
 
         /******************ADD YOUR SIMULATION CODE HERE*************************/
-
-        // Simulate the main program execution
-        if (!initialized) {
-            // initialize_variables(); //CPU burst (*1)
-            execution += std::to_string(current_time) + ", " + std::to_string(1) + ", OS starts\n";
-            current_time++;
-            execution += std::to_string(current_time) + ", " + std::to_string(1) + ", OS reads program into memory\n";
-            current_time++;
-            execution += std::to_string(current_time) + ", " + std::to_string(1) + ", OS starts program execution\n";
-            current_time++;
-            initialized = true;
-        }
-
-        // Handle different activities from trace
         if (activity == "CPU") {
-            // CPU burst - simulate calculate(x) operation
-            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", CPU execution\n";
+            //Log CPU burst
+            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", CPU burst\n";
             current_time += duration_intr;
-            
-            // Simulate calculation and processing
-            data_y = data_x * 2; // Simple calculation example
-            
         } else if (activity == "SYSCALL") {
-            // x = read_input(); //read 'x' from some input device (*2)
-            // This represents system call for I/O operations
-            execution += std::to_string(current_time) + ", " + std::to_string(1) + ", system call\n";
-            current_time++;
-            
-            // Simulate system call processing
-            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", system call processing\n";
-            current_time += duration_intr;
-            
-            // Simulate reading input
-            data_x++; // Increment as example of reading new data
-            
-        } else if (activity == "END_IO") {
-            // print_output(y); //Send 'y' to some output device
-            execution += std::to_string(current_time) + ", " + std::to_string(1) + ", I/O operation complete\n";
-            current_time++;
-            
-            // Simulate I/O completion processing
-            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", process I/O completion\n";
-            current_time += duration_intr;
-            
-            // delete(y, x); //CPU burst; free memory (cleanup)
-            // This would be handled as part of the processing
-        }
+            //Run interrupt sequence for SYSCALL
+            int device_num = duration_intr;
 
+            //Interrupt boilerplate
+            auto [boilerplate_execution, updated_time] = intr_boilerplate(current_time, device_num, context_save_time, vectors);
+            execution += boilerplate_execution;
+            current_time = updated_time;
+
+            //ISR body
+            execution += std::to_string(current_time) + ", "  + std::to_string(isr_body_time) + ", execute ISR body\n";
+            current_time += isr_body_time;
+
+            //IRET
+            execution += std::to_string(current_time) + ", 1, IRET\n";
+            current_time++;
+
+            //Schedule device I/O completion
+            int io_completion_time = current_time + delays[device_num];
+            execution += std::to_string(io_completion_time) + ", " + std::to_string(delays[device_num]) + ", device " + std::to_string(device_num) + " completed I/O\n";
+
+        } else if (activity == "END_IO") {
+            //Handle end of I/O notification
+            int device_num = duration_intr;
+            execution += std::to_string(current_time) + ", 1, END_IO from device " + std::to_string(device_num) + "\n";
+            current_time++;
+
+        } else {
+            // Error catching for unknown activity/input
+            execution += "# Warning: unknown activity in trace\n";
+        }
         /************************************************************************/
 
     }
