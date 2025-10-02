@@ -1,0 +1,28 @@
+0, 40, CPU burst
+40, 1, switch to kernel mode
+41, 10, context saved
+51, 1, find vector 3 in memory position 0x0006
+52, 1, load address 0X042B into the PC
+53, 40, execute ISR body
+93, 1, IRET
+394, 300, device 3 completed I/O
+94, 1, END_IO from device 3
+95, 60, CPU burst
+155, 1, switch to kernel mode
+156, 10, context saved
+166, 1, find vector 8 in memory position 0x0010
+167, 1, load address 0X06EF into the PC
+168, 40, execute ISR body
+208, 1, IRET
+1209, 1000, device 8 completed I/O
+209, 1, END_IO from device 8
+210, 30, CPU burst
+240, 1, switch to kernel mode
+241, 10, context saved
+251, 1, find vector 15 in memory position 0x001E
+252, 1, load address 0X0584 into the PC
+253, 40, execute ISR body
+293, 1, IRET
+362, 68, device 15 completed I/O
+294, 1, END_IO from device 15
+295, 20, CPU burst
